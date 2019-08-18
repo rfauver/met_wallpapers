@@ -1,0 +1,1 @@
+Start by downloading a copy of `MetObjects.csv` from the [The Metropolitan Museum of Art Open Access repo](https://github.com/metmuseum/openaccess) and placing it in the directory where you run this script

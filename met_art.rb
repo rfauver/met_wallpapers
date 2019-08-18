@@ -62,8 +62,9 @@ class MetArt
     image.write("#{path.gsub('.jpg', '')}_wallpaper.jpg")
   end
 
+  # MetObjects.csv can be downloaded here https://github.com/metmuseum/openaccess
   def data
-    @data ||= read_csv('/Users/rfauv/Documents/MetObjects.csv').select do |h|
+    @data ||= read_csv('MetObjects.csv').select do |h|
       h["Is Public Domain"] == "True"
     end
   end
