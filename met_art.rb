@@ -1,12 +1,13 @@
 class MetArt
   require 'fileutils'
   require 'csv'
-  require 'nokogiri'
   require 'fastimage'
   require 'open-uri'
   require 'rmagick'
+  require 'json'
 
   FOLDER_NAME = 'wallpapers'.freeze
+  API_URI = 'https://collectionapi.metmuseum.org/public/collection/v1/objects/'.freeze
 
   def initialize
     FileUtils.mkdir_p(File.join(File.dirname(__FILE__), FOLDER_NAME))
@@ -32,9 +33,9 @@ class MetArt
   end
 
   def download_image(artwork)
-    page = Nokogiri::HTML(open(artwork["Link Resource"]))
-    image_url = page&.css('.gtm__download__image')&.first
-                  &.attributes&.fetch('href', nil)&.value
+    response = Net::HTTP.get(URI(API_URI + artwork['Object ID']))
+    image_url = JSON.parse(response)['primaryImage']
+
     print_error('Failed to find image URL') and return if image_url.nil?
     width, height = FastImage.size(image_url)
     print_error('Could not get image') and return if [width, height].any?(&:nil?)
