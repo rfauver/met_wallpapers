@@ -3,24 +3,38 @@ class MetArt
   require 'csv'
   require 'fastimage'
   require 'open-uri'
+  require 'optparse'
   require 'rmagick'
   require 'json'
 
   FOLDER_NAME = 'wallpapers'.freeze
   API_URI = 'https://collectionapi.metmuseum.org/public/collection/v1/objects/'.freeze
 
-  def initialize
+  attr_accessor :department, :limit, :output_height, :output_width,
+                :require_landscape, :require_portrait, :background_color,
+                :text_color
+
+  def initialize(params)
+    @department = params[:department]
+    @limit = params[:limit] || Float::MAX
+    @output_height = params[:height] || 1080
+    @output_width = params[:width] || 1920
+    @require_landscape = params[:landscape]
+    @require_portrait = params[:portrait]
+    @background_color = params[:'background-color'] || 'black'
+    @text_color = params[:'text-color'] || 'white'
     FileUtils.mkdir_p(File.join(File.dirname(__FILE__), FOLDER_NAME))
   end
 
-  def fetch(total: 10, department: nil)
+  def fetch
     artworks = if department.nil?
       data
     else
       data.select { |h| h["Department"] == department }
     end
     images_downloaded = 0
-    while images_downloaded < total && !artworks.empty?
+
+    while images_downloaded < limit && !artworks.empty?
       artwork = artworks.delete_at(rand(artworks.size)) # remove random artwork from list
       path = download_image(artwork)
       unless path.nil?
@@ -39,8 +53,9 @@ class MetArt
     print_error('Failed to find image URL') and return if image_url.nil?
     width, height = FastImage.size(image_url)
     print_error('Could not get image') and return if [width, height].any?(&:nil?)
-    print_error('Too Small') and return if width < 2560 && height < 1440
-    print_error('Not landscape') and return if height > width
+    print_error('Too Small') and return if width < output_width && height < output_height
+    print_error('Not landscape') and return if require_landscape && height > width
+    print_error('Not portrait') and return if require_portrait && height < width
     filename = "#{artwork['Title'].downcase.gsub(' ', '_')}.jpg"
     open(image_url) do |image|
       File.open(filename, 'wb') do |file|
@@ -51,20 +66,24 @@ class MetArt
   end
 
   def format_image(path, artwork)
-    background = Magick::Image.new(2560, 1440) { self.background_color = 'black' }
     image = Magick::ImageList.new(path)
-    image.change_geometry!('2560x1440') do |cols, rows, img|
+    image.change_geometry!("#{output_width}x#{output_height}") do |cols, rows, img|
      img.resize!(cols, rows)
     end
     title = artwork['Title']&.strip
     artist = artwork['Artist Display Name']&.strip
     year = artwork['Object End Date']&.strip
     caption = [title, artist, year].compact.join("\n")
+    local_text_color = text_color
     Magick::Draw.new.annotate(image, 0, 0, 20, 15, caption) do
-      self.fill = 'white'
+      self.fill = local_text_color
       self.font = 'Palatino-Italic'
       self.gravity = Magick::SouthEastGravity
       self.pointsize = 30
+    end
+    local_background_color = background_color
+    background = Magick::Image.new(output_width, output_height) do
+      self.background_color = local_background_color
     end
     image = background.composite(image, Magick::CenterGravity, Magick::OverCompositeOp)
     image.write(output_path(path))
@@ -101,4 +120,17 @@ class MetArt
   end
 end
 
-MetArt.new.fetch
+params = {}
+OptionParser.new do |opts|
+  opts.on('--width=WIDTH', Integer)
+  opts.on('--height=HEIGHT', Integer)
+  opts.on('-d=DEPARTMENT', '--department=DEPARTMENT')
+  opts.on('-l=LIMIT', '--limit=LIMIT', Integer)
+  opts.on('--landscape')
+  opts.on('--portrait')
+  opts.on('--background-color=BACKGROUND_COLOR')
+  opts.on('--text-color=TEXT_COLOR')
+end.parse!(into: params)
+p params
+
+MetArt.new(params).fetch
