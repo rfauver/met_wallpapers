@@ -6,6 +6,7 @@ class MetArt
   require 'optparse'
   require 'rmagick'
   require 'json'
+  require 'ruby-progressbar'
 
   FOLDER_NAME = 'wallpapers'.freeze
   API_URI = 'https://collectionapi.metmuseum.org/public/collection/v1/objects/'.freeze
@@ -97,10 +98,15 @@ class MetArt
   private
 
   def read_csv(path)
+    puts "\t--- Loading CSV ---"
+    row_count = 475_000 # approximate collection count to avoid parsing entire CSV
+    progress_bar = ProgressBar.create(total: row_count, length: 80)
     csv_data = []
     CSV.foreach(path, headers: true) do |row|
+      progress_bar.increment
       csv_data << row.to_h if row["Is Public Domain"] == "True"
     end
+    puts "\n\t--- CSV Loaded ---"
     csv_data
   end
 
