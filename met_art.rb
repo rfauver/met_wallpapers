@@ -8,6 +8,8 @@ class MetArt
   require 'json'
   require 'ruby-progressbar'
 
+  # MetObjects.csv can be downloaded here https://github.com/metmuseum/openaccess
+  CSV_PATH = 'MetObjects.csv'.freeze
   FOLDER_NAME = 'wallpapers'.freeze
   API_URI = 'https://collectionapi.metmuseum.org/public/collection/v1/'.freeze
 
@@ -17,7 +19,7 @@ class MetArt
 
   def initialize(params)
     @department = params[:department]&.downcase
-    validate_department
+    validate_department if department
 
     @limit = params[:limit] || Float::MAX
     @output_height = params[:height] || 1080
@@ -92,14 +94,14 @@ class MetArt
     image.write(output_path(path))
   end
 
-  # MetObjects.csv can be downloaded here https://github.com/metmuseum/openaccess
   def data
-    @data ||= read_csv('MetObjects.csv')
+    @data ||= read_csv(CSV_PATH)
   end
 
   private
 
   def read_csv(path)
+    validate_csv_present(path)
     puts "\t--- Loading CSV ---"
     row_count = 475_000 # approximate collection count to avoid parsing entire CSV
     progress_bar = ProgressBar.create(total: row_count, length: 80)
@@ -117,15 +119,27 @@ class MetArt
     true
   end
 
+  def exit_error(message)
+    tabbed_message = message.split("\n").map { |line| "\t#{line}" }.join("\n")
+    puts "EXITING:\n#{tabbed_message}"
+    exit
+  end
+
   def validate_department
     response = Net::HTTP.get(URI(API_URI + 'departments'))
     valid_departments = JSON.parse(response).fetch('departments').map do |department|
       department['displayName'].downcase
     end
-    unless valid_departments.include?(department)
-      print_error("Invalid department: '#{department}'")
-      exit
-    end
+    exit_error("Invalid department: '#{department}'") unless valid_departments.include?(department)
+  end
+
+  def validate_csv_present(path)
+    return if File.exist?(path)
+    error = <<~MESSAGE
+      #{CSV_PATH} not present
+      Download #{CSV_PATH} from https://github.com/metmuseum/openaccess and place in the directory of this script
+    MESSAGE
+    exit_error(error)
   end
 
   def output_path(path)
