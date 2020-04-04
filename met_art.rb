@@ -9,14 +9,16 @@ class MetArt
   require 'ruby-progressbar'
 
   FOLDER_NAME = 'wallpapers'.freeze
-  API_URI = 'https://collectionapi.metmuseum.org/public/collection/v1/objects/'.freeze
+  API_URI = 'https://collectionapi.metmuseum.org/public/collection/v1/'.freeze
 
   attr_accessor :department, :limit, :output_height, :output_width,
                 :require_landscape, :require_portrait, :background_color,
                 :text_color
 
   def initialize(params)
-    @department = params[:department]
+    @department = params[:department]&.downcase
+    validate_department
+
     @limit = params[:limit] || Float::MAX
     @output_height = params[:height] || 1080
     @output_width = params[:width] || 1920
@@ -31,7 +33,7 @@ class MetArt
     artworks = if department.nil?
       data
     else
-      data.select { |h| h["Department"] == department }
+      data.select { |h| h["Department"].downcase == department }
     end
     images_downloaded = 0
 
@@ -48,7 +50,7 @@ class MetArt
   end
 
   def download_image(artwork)
-    response = Net::HTTP.get(URI(API_URI + artwork['Object ID']))
+    response = Net::HTTP.get(URI(API_URI + 'objects/' + artwork['Object ID']))
     image_url = JSON.parse(response)['primaryImage']
 
     print_error('Failed to find image URL') and return if image_url.nil?
@@ -58,7 +60,7 @@ class MetArt
     print_error('Not landscape') and return if require_landscape && height > width
     print_error('Not portrait') and return if require_portrait && height < width
     filename = "#{artwork['Title'].downcase.gsub(' ', '_')}.jpg"
-    open(image_url) do |image|
+    URI.open(image_url) do |image|
       File.open(filename, 'wb') do |file|
         file.puts image.read
       end
@@ -113,6 +115,17 @@ class MetArt
   def print_error(message)
     puts message
     true
+  end
+
+  def validate_department
+    response = Net::HTTP.get(URI(API_URI + 'departments'))
+    valid_departments = JSON.parse(response).fetch('departments').map do |department|
+      department['displayName'].downcase
+    end
+    unless valid_departments.include?(department)
+      print_error("Invalid department: '#{department}'")
+      exit
+    end
   end
 
   def output_path(path)
