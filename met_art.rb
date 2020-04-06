@@ -12,6 +12,8 @@ class MetArt
   CSV_PATH = 'MetObjects.csv'.freeze
   FOLDER_NAME = 'wallpapers'.freeze
   API_URI = 'https://collectionapi.metmuseum.org/public/collection/v1/'.freeze
+  CLEAR_LINE = "\033[K".freeze
+  MOVE_CURSOR_UP = "\033[1A".freeze
 
   attr_accessor :department, :limit, :output_height, :output_width,
                 :require_landscape, :require_portrait, :background_color,
@@ -38,17 +40,18 @@ class MetArt
       data.select { |h| h["Department"].downcase == department }
     end
     images_downloaded = 0
+    print_message("\t--- Downloading ---\n")
 
     while images_downloaded < limit && !artworks.empty?
       artwork = artworks.delete_at(rand(artworks.size)) # remove random artwork from list
       path = download_image(artwork)
-      unless path.nil?
-        images_downloaded += 1
-        format_image(path, artwork)
-        File.delete(path)
-      end
+      next if path.nil?
+      images_downloaded += 1
+      format_image(path, artwork)
+      print_message("Success #{images_downloaded}: downloaded '#{(artwork['Title'] || 'untitled')}'")
+      File.delete(path)
     end
-    puts "Done. #{images_downloaded} images downloaded"
+    print_message("Done. #{images_downloaded} wallpapers downloaded\n")
   end
 
   def download_image(artwork)
@@ -61,7 +64,7 @@ class MetArt
     print_error('Too Small') and return if width < output_width && height < output_height
     print_error('Not landscape') and return if require_landscape && height > width
     print_error('Not portrait') and return if require_portrait && height < width
-    filename = "#{artwork['Title'].downcase.gsub(' ', '_')}.jpg"
+    filename = "#{(artwork['Title'] || 'untitled').downcase.gsub(' ', '_')}.jpg"
     URI.open(image_url) do |image|
       File.open(filename, 'wb') do |file|
         file.puts image.read
@@ -102,7 +105,7 @@ class MetArt
 
   def read_csv(path)
     validate_csv_present(path)
-    puts "\t--- Loading CSV ---"
+    print_message("\t--- Loading CSV ---\n")
     row_count = 475_000 # approximate collection count to avoid parsing entire CSV
     progress_bar = ProgressBar.create(total: row_count, length: 80)
     csv_data = []
@@ -110,16 +113,21 @@ class MetArt
       progress_bar.increment
       csv_data << row.to_h if row["Is Public Domain"] == "True"
     end
-    puts "\n\t--- CSV Loaded ---"
+    print_message("#{MOVE_CURSOR_UP}#{CLEAR_LINE}")
     csv_data
   end
 
-  def print_error(message)
-    puts message
+  def print_message(message)
+    print "\r#{CLEAR_LINE}#{message}"
+    $stdout.flush
     true
   end
 
-  def exit_error(message)
+  def print_error(message)
+    print_message("Error: #{message}")
+  end
+
+  def exit_with_error(message)
     tabbed_message = message.split("\n").map { |line| "\t#{line}" }.join("\n")
     puts "EXITING:\n#{tabbed_message}"
     exit
@@ -130,7 +138,9 @@ class MetArt
     valid_departments = JSON.parse(response).fetch('departments').map do |department|
       department['displayName'].downcase
     end
-    exit_error("Invalid department: '#{department}'") unless valid_departments.include?(department)
+    unless valid_departments.include?(department)
+      exit_with_error("Invalid department: '#{department}'")
+    end
   end
 
   def validate_csv_present(path)
@@ -139,7 +149,7 @@ class MetArt
       #{CSV_PATH} not present
       Download #{CSV_PATH} from https://github.com/metmuseum/openaccess and place in the directory of this script
     MESSAGE
-    exit_error(error)
+    exit_with_error(error)
   end
 
   def output_path(path)
