@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rubygems'
 require 'bundler/setup'
 
@@ -12,11 +14,11 @@ require 'ruby-progressbar'
 
 class MetArt
   # MetObjects.csv can be downloaded here https://github.com/metmuseum/openaccess
-  CSV_PATH = 'MetObjects.csv'.freeze
-  FOLDER_NAME = 'wallpapers'.freeze
-  API_URI = 'https://collectionapi.metmuseum.org/public/collection/v1/'.freeze
-  CLEAR_LINE = "\033[K".freeze
-  MOVE_CURSOR_UP = "\033[1A".freeze
+  CSV_PATH = 'MetObjects.csv'
+  FOLDER_NAME = 'wallpapers'
+  API_URI = 'https://collectionapi.metmuseum.org/public/collection/v1/'
+  CLEAR_LINE = "\033[K"
+  MOVE_CURSOR_UP = "\033[1A"
 
   attr_accessor :department, :limit, :output_height, :output_width,
                 :require_landscape, :require_portrait, :background_color,
