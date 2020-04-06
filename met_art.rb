@@ -174,6 +174,12 @@ OptionParser.new do |opts|
   opts.on('--background-color=BACKGROUND_COLOR')
   opts.on('--text-color=TEXT_COLOR')
 end.parse!(into: params)
-p params
+unless params.empty?
+  puts 'Running with options:'
+  params.each do |(flag, value)|
+    puts "#{flag}: ".rjust(19) + value.to_s
+  end
+  puts
+end
 
 MetArt.new(params).fetch
