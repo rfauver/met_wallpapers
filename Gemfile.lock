@@ -1,0 +1,17 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    fastimage (2.1.7)
+    rmagick (4.1.1)
+    ruby-progressbar (1.10.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  fastimage
+  rmagick
+  ruby-progressbar
+
+BUNDLED WITH
+   2.0.1

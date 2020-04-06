@@ -1,13 +1,16 @@
-class MetArt
-  require 'fileutils'
-  require 'csv'
-  require 'fastimage'
-  require 'open-uri'
-  require 'optparse'
-  require 'rmagick'
-  require 'json'
-  require 'ruby-progressbar'
+require 'rubygems'
+require 'bundler/setup'
 
+require 'csv'
+require 'fastimage'
+require 'fileutils'
+require 'json'
+require 'open-uri'
+require 'optparse'
+require 'rmagick'
+require 'ruby-progressbar'
+
+class MetArt
   # MetObjects.csv can be downloaded here https://github.com/metmuseum/openaccess
   CSV_PATH = 'MetObjects.csv'.freeze
   FOLDER_NAME = 'wallpapers'.freeze
