@@ -56,3 +56,11 @@ In order to download a specific work, you can use the `--id` option. You can sea
 `ruby met_wallpapers.rb -d 'photographs'`
 
 ![temple_of_edfu](https://user-images.githubusercontent.com/7726851/78620250-4e915000-7834-11ea-9b8d-b2c1d66e2740.jpg)
+
+## License
+
+[MIT](LICENSE)
+
+Metropolitan Museum of Art Open Access API licensed with [CC0](https://creativecommons.org/publicdomain/zero/1.0/). Images downloaded by this script are limited to those marked by the API as in the Public Domain.
+
+[Met Open Access Policy](https://www.metmuseum.org/about-the-met/policies-and-documents/image-resources)
