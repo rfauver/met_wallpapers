@@ -18,9 +18,14 @@ Run with `ruby met_wallpapers.rb`
 
 Wallpapers will be downloaded into a `./wallpapers` folder, and the script will run until the limit paramter is reached or all matching images are downloaded.
 
+### Downloading specific work
+
+In order to download a specific work, you can use the `--id` option. You can search through the catalog on the [Met Musem website](https://www.metmuseum.org/art/collection/search). The id can be found in the URL of the individual work after `/search/`. For example, in order to download https://www.metmuseum.org/art/collection/search/459116, run `ruby met_wallpapers.rb --id 459116`.
+
 ## Options
 | Option               | Default   | Description                                                                                                      |
 |----------------------|-----------|------------------------------------------------------------------------------------------------------------------|
+| `--id`               |           | Download a specific work                                                                                         |
 | `--width`            | `1920`    | Wallpaper output width, in pixels                                                                                |
 | `--height`           | `1080`    | Wallpaper output height, in pixels                                                                               |
 | `-l`, `--limit`      |           | Limit number of wallpapers downloaded                                                                            |

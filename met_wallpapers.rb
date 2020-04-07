@@ -20,11 +20,12 @@ class MetArt
   CLEAR_LINE = "\033[K"
   MOVE_CURSOR_UP = "\033[1A"
 
-  attr_accessor :department, :limit, :output_height, :output_width,
+  attr_accessor :id, :department, :limit, :output_height, :output_width,
                 :require_landscape, :require_portrait, :background_color,
                 :text_color
 
   def initialize(params)
+    @id = params[:id]
     @department = params[:department]&.downcase
     validate_department if department
 
@@ -39,37 +40,39 @@ class MetArt
   end
 
   def fetch
-    artworks = if department.nil?
-      data
-    else
-      data.select { |h| h["Department"].downcase == department }
-    end
+    artworks = if id
+                 [{ "Object ID" => id }]
+               elsif department
+                 data.select { |h| h["Department"].downcase == department }
+               else
+                 data
+               end
     images_downloaded = 0
     print_message("\t--- Downloading ---\n")
 
     while images_downloaded < limit && !artworks.empty?
-      artwork = artworks.delete_at(rand(artworks.size)) # remove random artwork from list
+      csv_artwork = artworks.delete_at(rand(artworks.size)) # remove random artwork from list
+      artwork = artwork_from_id(csv_artwork['Object ID'])
       path = download_image(artwork)
       next if path.nil?
       images_downloaded += 1
       format_image(path, artwork)
-      print_message("Success #{images_downloaded}: downloaded '#{(artwork['Title'] || 'untitled')}'")
+      print_message("Success #{images_downloaded}: downloaded '#{(artwork['title'] || 'untitled')}'")
       File.delete(path)
     end
-    print_message("Done. #{images_downloaded} wallpapers downloaded\n")
+    puralized = 'wallpaper' + (images_downloaded == 1 ? '' : 's')
+    print_message("Done. #{images_downloaded} #{puralized} downloaded\n")
   end
 
   def download_image(artwork)
-    response = Net::HTTP.get(URI(API_URI + 'objects/' + artwork['Object ID']))
-    image_url = JSON.parse(response)['primaryImage']
-
+    image_url = artwork['primaryImage']
     print_error('Failed to find image URL') and return if image_url.nil?
     width, height = FastImage.size(image_url)
     print_error('Could not get image') and return if [width, height].any?(&:nil?)
     print_error('Too Small') and return if width < output_width && height < output_height
     print_error('Not landscape') and return if require_landscape && height > width
     print_error('Not portrait') and return if require_portrait && height < width
-    filename = "#{(artwork['Title'] || 'untitled').downcase.gsub(' ', '_')}.jpg"
+    filename = "#{(artwork['title'] || 'untitled').downcase.gsub(' ', '_')}.jpg"
     URI.open(image_url) do |image|
       File.open(filename, 'wb') do |file|
         file.puts image.read
@@ -83,10 +86,10 @@ class MetArt
     image.change_geometry!("#{output_width}x#{output_height}") do |cols, rows, img|
      img.resize!(cols, rows)
     end
-    title = artwork['Title']&.strip
-    artist = artwork['Artist Display Name']&.strip
-    year = artwork['Object End Date']&.strip
-    caption = [title, artist, year].compact.join("\n")
+    title = artwork['title']&.strip
+    artist = artwork['artistDisplayName']&.strip
+    year = artwork['objectDate']&.strip
+    caption = [title, artist, year].map { |s| s unless s&.empty? }.compact.join("\n")
     local_text_color = text_color
     Magick::Draw.new.annotate(image, 0, 0, 20, 15, caption) do
       self.fill = local_text_color
@@ -107,6 +110,10 @@ class MetArt
   end
 
   private
+
+  def artwork_from_id(id)
+    JSON.parse(Net::HTTP.get(URI("#{API_URI}objects/#{id}")))
+  end
 
   def read_csv(path)
     validate_csv_present(path)
@@ -170,6 +177,7 @@ end
 
 params = {}
 OptionParser.new do |opts|
+  opts.on('--id=NUM', Integer, 'Download a specific work by Object ID')
   opts.on('--width=NUM', Integer, 'Wallpaper output width')
   opts.on('--height=NUM', Integer, 'Wallpaper output height')
   opts.on('-lNUM', '--limit=NUM', Integer, 'Limit the number of wallpapers downloaded')
