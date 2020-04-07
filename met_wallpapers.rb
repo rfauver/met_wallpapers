@@ -19,6 +19,7 @@ class MetArt
   API_URI = 'https://collectionapi.metmuseum.org/public/collection/v1/'
   CLEAR_LINE = "\033[K"
   MOVE_CURSOR_UP = "\033[1A"
+  MAX_FILENAME_LENGTH = 100
 
   attr_accessor :id, :department, :limit, :output_height, :output_width,
                 :require_landscape, :require_portrait, :background_color,
@@ -53,12 +54,12 @@ class MetArt
     while images_downloaded < limit && !artworks.empty?
       csv_artwork = artworks.delete_at(rand(artworks.size)) # remove random artwork from list
       artwork = artwork_from_id(csv_artwork['Object ID'])
-      path = download_image(artwork)
-      next if path.nil?
+      filename = download_image(artwork)
+      next if filename.nil?
       images_downloaded += 1
-      format_image(path, artwork)
-      print_message("Success #{images_downloaded}: downloaded '#{(artwork['title'] || 'untitled')}'")
-      File.delete(path)
+      format_image(filename, artwork)
+      print_message("Success #{images_downloaded}: downloaded '#{filename}'")
+      File.delete(filename)
     end
     puralized = 'wallpaper' + (images_downloaded == 1 ? '' : 's')
     print_message("Done. #{images_downloaded} #{puralized} downloaded\n")
@@ -72,7 +73,7 @@ class MetArt
     print_error('Too Small') and return if width < output_width && height < output_height
     print_error('Not landscape') and return if require_landscape && height > width
     print_error('Not portrait') and return if require_portrait && height < width
-    filename = "#{(artwork['title'] || 'untitled').downcase.gsub(' ', '_')}.jpg"
+    filename = artwork_to_filename(artwork)
     URI.open(image_url) do |image|
       File.open(filename, 'wb') do |file|
         file.puts image.read
@@ -164,8 +165,13 @@ class MetArt
     exit_with_error(error)
   end
 
-  def output_path(path)
-    output = File.join(File.dirname(__FILE__), FOLDER_NAME, path)
+  def artwork_to_filename(artwork)
+    title = artwork['title'] || 'untitled'
+    "#{title[0...MAX_FILENAME_LENGTH].downcase.gsub(' ', '_')}.jpg"
+  end
+
+  def output_path(filename)
+    output = File.join(File.dirname(__FILE__), FOLDER_NAME, filename)
     while File.exist?(output)
       match_data = output.match(/(\d+)\.jpg$/)
       file_number = match_data.nil? ? 0 : match_data.captures.first.to_i + 1
