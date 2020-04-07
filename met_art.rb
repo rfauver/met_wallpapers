@@ -170,14 +170,18 @@ end
 
 params = {}
 OptionParser.new do |opts|
-  opts.on('--width=WIDTH', Integer)
-  opts.on('--height=HEIGHT', Integer)
-  opts.on('-d=DEPARTMENT', '--department=DEPARTMENT')
-  opts.on('-l=LIMIT', '--limit=LIMIT', Integer)
-  opts.on('--landscape')
-  opts.on('--portrait')
-  opts.on('--background-color=BACKGROUND_COLOR')
-  opts.on('--text-color=TEXT_COLOR')
+  opts.on('--width=NUM', Integer, 'Wallpaper output width')
+  opts.on('--height=NUM', Integer, 'Wallpaper output height')
+  opts.on('-lNUM', '--limit=NUM', Integer, 'Limit the number of wallpapers downloaded')
+  opts.on('-dSTRING', '--department=STRING', "Filter to department in this list: #{MetArt::API_URI}departments")
+  opts.on('--landscape', 'Restrict to landscape images only')
+  opts.on('--portrait', 'Restrict to portrait images only')
+  opts.on('--background-color=STRING', "Wallpaper background color string, e.g. '#0c1087', 'pink'")
+  opts.on('--text-color=STRING', "Caption text color string, e.g. '#0c1087', 'pink'")
+  opts.on('-h', '--help', 'View this menu') do
+    puts opts
+    exit
+  end
 end.parse!(into: params)
 unless params.empty?
   puts 'Running with options:'
